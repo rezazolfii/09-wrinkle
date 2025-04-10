@@ -1,5 +1,6 @@
 import streamlit as st
 import tensorflow as tf
+tf.config.set_visible_devices([], 'GPU')
 from tensorflow.keras import backend as K
 from tensorflow.keras.models import load_model
 import numpy as np
