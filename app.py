@@ -91,7 +91,7 @@ def custom_iou_metric(threshold=0.5):
     return iou
 
 # Function to load the model - using st.cache for older Streamlit versions
-@st.cache(allow_output_mutation=True)
+@st.cache_resource(allow_output_mutation=True)
 def load_wrinkle_model():
     custom_objects = {
         'iou_focused_loss': iou_focused_loss,
@@ -219,7 +219,7 @@ def main():
         st.info("This column is reserved for your reference image. You can add it by modifying the code.")
 
 # With this:
-        st.image("Picture1.png", caption="Your Reference Image", use_column_width=True)
+        st.image("Picture1.png", caption="Your Reference Image", use_container_width=True)
         st.markdown('<div class="results-container">', unsafe_allow_html=True)
         st.markdown('<p class="subtitle">Reference Image</p>', unsafe_allow_html=True)
         st.info("This column is reserved for your reference image. You can add it by modifying the code.")
