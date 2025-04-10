@@ -91,7 +91,7 @@ def custom_iou_metric(threshold=0.5):
     return iou
 
 # Function to load the model - using st.cache for older Streamlit versions
-@st.cache_resource(allow_output_mutation=True)
+@st.cache_resource
 def load_wrinkle_model():
     custom_objects = {
         'iou_focused_loss': iou_focused_loss,
