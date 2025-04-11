@@ -115,12 +115,12 @@ def load_wrinkle_model():
         st.error(f"Error loading model: {str(e)}")
         return None
 
-# Function to preprocess the image with memory optimization
-def preprocess_image(img, target_size=(256, 256)):  # Reduced size for memory efficiency
+# Function to preprocess the image - KEEPING ORIGINAL 512x512 SIZE
+def preprocess_image(img):
     try:
-        # Convert to smaller size to save memory
+        # Resize to 512x512 as required by the model
         img_pil = Image.fromarray(np.array(img))
-        img_pil = img_pil.resize(target_size)
+        img_pil = img_pil.resize((512, 512))
         img_array = np.array(img_pil)
         
         # Convert to float32 and normalize
@@ -194,8 +194,8 @@ def main():
                     
                     if analyze_button:
                         with st.spinner("Analyzing image..."):
-                            # Process in smaller chunks to save memory
-                            processed_img = preprocess_image(image, target_size=(256, 256))
+                            # Process with required 512x512 size
+                            processed_img = preprocess_image(image)
                             
                             if processed_img is not None:
                                 # Load model (cached)
@@ -204,37 +204,48 @@ def main():
                                 if model is not None:
                                     # Make prediction with smaller batch size
                                     img_batch = tf.expand_dims(processed_img, axis=0)
-                                    prediction = model.predict(img_batch, batch_size=1)
                                     
-                                    # Create visualization
-                                    fig = create_visualization(processed_img, prediction)
+                                    # Use try-except to handle potential memory issues
+                                    try:
+                                        prediction = model.predict(img_batch, batch_size=1)
+                                        
+                                        # Create visualization
+                                        fig = create_visualization(processed_img, prediction)
+                                        
+                                        if fig is not None:
+                                            # Display the results
+                                            st.pyplot(fig)
+                                            
+                                            # Add some metrics
+                                            st.markdown("### Analysis Metrics")
+                                            coverage = np.mean(prediction[0, :, :, 0] > 0.7) * 100
+                                            st.metric("Wrinkle Coverage", f"{coverage:.2f}%")
+                                            
+                                            # Add download button for the result
+                                            buf = io.BytesIO()
+                                            fig.savefig(buf, format="png")
+                                            buf.seek(0)
+                                            st.download_button(
+                                                label="Download Analysis",
+                                                data=buf,
+                                                file_name="wrinkle_analysis.png",
+                                                mime="image/png"
+                                            )
+                                    except tf.errors.ResourceExhaustedError:
+                                        st.error("Memory error: The image is too large to process with available memory. Try using a smaller image.")
+                                    except Exception as e:
+                                        st.error(f"Error during prediction: {str(e)}")
                                     
-                                    if fig is not None:
-                                        # Display the results
-                                        st.pyplot(fig)
-                                        
-                                        # Add some metrics
-                                        st.markdown("### Analysis Metrics")
-                                        coverage = np.mean(prediction[0, :, :, 0] > 0.7) * 100
-                                        st.metric("Wrinkle Coverage", f"{coverage:.2f}%")
-                                        
-                                        # Add download button for the result
-                                        buf = io.BytesIO()
-                                        fig.savefig(buf, format="png")
-                                        buf.seek(0)
-                                        st.download_button(
-                                            label="Download Analysis",
-                                            data=buf,
-                                            file_name="wrinkle_analysis.png",
-                                            mime="image/png"
-                                        )
-                                        
-                                        # Clean up memory
+                                    # Clean up memory
+                                    if 'fig' in locals():
                                         plt.close(fig)
+                                    if 'prediction' in locals():
                                         del prediction
+                                    if 'img_batch' in locals():
                                         del img_batch
+                                    if 'processed_img' in locals():
                                         del processed_img
-                                        gc.collect()
+                                    gc.collect()
                 except Exception as e:
                     st.error(f"Error during analysis: {str(e)}")
             else:
